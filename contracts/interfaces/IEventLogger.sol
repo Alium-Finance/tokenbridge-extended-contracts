@@ -8,10 +8,8 @@ interface IEventLogger {
     struct EventData {
         uint256[2] chains; // [chainId, chainId]
         address[2] tokens; // where, ETH - address(0)
-        address[2] parties; // address from - to
+        address[2] parties; // address from - to [account, account on other side]
     }
-
-    function supportedChains() external view returns (ISupportedChains _address);
 
     function log(EventData calldata data) external;
 
