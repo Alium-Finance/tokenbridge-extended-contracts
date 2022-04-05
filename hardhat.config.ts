@@ -39,9 +39,21 @@ module.exports = {
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
+    bscTestnet: {
+      gasPrice: "auto",
+      url: process.env.BSC_TESTNET_URL || "",
+      accounts:
+          process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
     phantom: {
       gasPrice: "auto",
       url: process.env.PHANTOM_URL || "",
+      accounts:
+          process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+    phantomTestnet: {
+      gasPrice: "auto",
+      url: process.env.PHANTOM_TESTNET_URL || "",
       accounts:
           process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
