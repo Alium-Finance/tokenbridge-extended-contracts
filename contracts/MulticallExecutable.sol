@@ -10,7 +10,7 @@ import "./OperatorAccess.sol";
  *
  * _Available since v4.1._
  */
-contract MulticallExecutable is OperatorAccess {
+abstract contract MulticallExecutable is OperatorAccess {
     struct InputData {
         address dest;
         bytes data;
@@ -18,12 +18,15 @@ contract MulticallExecutable is OperatorAccess {
     }
 
     function execute(InputData[] calldata _data)
-        external
+        public
         virtual
         payable
-        onlyOperator
         returns (bytes[] memory results)
     {
+        results = _execute(_data);
+    }
+
+    function _execute(InputData[] calldata _data) internal returns (bytes[] memory results) {
         uint256 dataLength = _data.length;
         uint256 amountPassed;
         for (uint256 i = 0; i < dataLength; i++) {
