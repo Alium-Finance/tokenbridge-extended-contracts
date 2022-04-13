@@ -64,7 +64,7 @@ contract MulticallUserExecutable is MulticallExecutable {
         results = _execute(_data);
     }
 
-    function setResolvedRouters(address[] calldata _routers) external {
+    function setResolvedRouters(address[] calldata _routers) external onlyOwner {
         for (uint i; i < _routers.length; i++) {
             routers[_routers[i]] = true;
         }
@@ -79,7 +79,7 @@ contract MulticallUserExecutable is MulticallExecutable {
     }
 
     function setEventLogger(address _eventLogger) external onlyOwner {
-        alm = _eventLogger;
+        eventLogger = _eventLogger;
     }
 
     function approveALMToAMB() external onlyOwner {
@@ -89,5 +89,17 @@ contract MulticallUserExecutable is MulticallExecutable {
     function setScenario(bytes32 _scenario, string memory _key) external onlyOwner {
         scenarios[_scenario].name = _key;
         scenarios[_scenario].status = true;
+    }
+
+    function countScenarioHash(bytes[] calldata _data)
+        external
+        pure
+        returns (bytes32 hash)
+    {
+        bytes4[] memory signatures = new bytes4[](_data.length);
+        for (uint i; i < _data.length; i++) {
+            signatures[i] = SignatureHelper.getSignature(_data[i]);
+        }
+        hash = SignatureHelper.getHash(signatures);
     }
 }
