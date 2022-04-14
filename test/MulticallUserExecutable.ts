@@ -1,6 +1,7 @@
-import chai from "chai";
+import chai, { assert } from "chai";
 
 import { ethers } from "hardhat";
+import { getCurrentTimestamp } from "hardhat/internal/hardhat-network/provider/utils/getCurrentTimestamp";
 import { BigNumber, Contract, Signer } from "ethers";
 import { solidity } from "ethereum-waffle";
 import { Interface, parseEther } from "ethers/lib/utils";
@@ -89,7 +90,7 @@ describe("Multicall User executable", function () {
         alm = await ERC20Mock.deploy("ALM", "ALM");
         await alm.deployed()
 
-        amb = await AMBMock.deploy();
+        amb = await AMBMock.deploy(alm.address);
         await amb.deployed()
 
         eventLogger = await EventLogger.deploy(OWNER)
@@ -113,8 +114,17 @@ describe("Multicall User executable", function () {
 
         await WETH_USD.mint(ALICE)
 
+        await factory.createPair(weth.address, alm.address);
+        let WETH_ALM: Contract = await getPairAddress(weth.address, alm.address)
+
+        await alm.mint(WETH_ALM.address, 50000000000)
+        await weth.deposit({value: 10000000000})
+        await weth.transfer(WETH_ALM.address, 10000000000)
+
+        await WETH_ALM.mint(ALICE)
+
         await multicall.connect(OWNER_SIGNER).setResolvedRouters([
-            ///
+            router.address
         ])
         await multicall.connect(OWNER_SIGNER).setAMB(amb.address)
         await multicall.connect(OWNER_SIGNER).setALM(alm.address)
@@ -125,12 +135,21 @@ describe("Multicall User executable", function () {
     });
 
     describe("success tests", () => {
-        it("#execute", async () => {
+        it.only("#execute", async () => {
             await erc20.mint(ALICE, parseEther("1.0"))
             await erc20.connect(ALICE_SIGNER).approve(multicall.address, parseEther("1.0"))
 
-            let erc20Interface = new Interface([...erc20.interface.fragments])
-            let eventLoggerInterface = new Interface([...eventLogger.interface.fragments])
+            const erc20Interface = new Interface([...erc20.interface.fragments])
+            const routerInterface = new Interface([...router.interface.fragments])
+            const bridgeInterface = new Interface([...amb.interface.fragments])
+            const eventLoggerInterface = new Interface([...eventLogger.interface.fragments])
+
+            const multicallForeignChain = multicall.address
+
+            const expectedAmountsOut = await router.getAmountsOut(
+                parseEther("1.0"),
+                [erc20.address, weth.address, alm.address]
+            )
 
             const data: DataInput[] = [
                 {
@@ -139,6 +158,33 @@ describe("Multicall User executable", function () {
                         ALICE,
                         multicall.address,
                         parseEther("1.0")
+                    ]),
+                    value: 0
+                },
+                {
+                    dest: erc20.address,
+                    data: erc20Interface.encodeFunctionData('approve', [
+                        router.address,
+                        ethers.constants.MaxUint256
+                    ]),
+                    value: 0
+                },
+                {
+                    dest: router.address,
+                    data: routerInterface.encodeFunctionData('swapExactTokensForTokens', [
+                        parseEther("1.0"),
+                        0,
+                        [erc20.address, weth.address, alm.address],
+                        multicall.address,
+                        getCurrentTimestamp() + (20 * 60)
+                    ]),
+                    value: 0
+                },
+                {
+                    dest: amb.address,
+                    data: bridgeInterface.encodeFunctionData('relayTokens', [
+                        multicallForeignChain,
+                        expectedAmountsOut[expectedAmountsOut.length-1]
                     ]),
                     value: 0
                 },
@@ -158,9 +204,14 @@ describe("Multicall User executable", function () {
 
             // console.log(data.map(value => value.data))
             let scenarioHash = await multicall.countScenarioHash(data.map(value => value.data));
-            await multicall.connect(OWNER_SIGNER).setScenario(scenarioHash, "TEST")
+
+            console.log(`Scenario hash ERC20_ERC20: ${scenarioHash}`)
+
+            await multicall.connect(OWNER_SIGNER).setScenario(scenarioHash, "ERC20_ERC20")
 
             await multicall.connect(ALICE_SIGNER).execute(data);
+
+            assert.equal(String(expectedAmountsOut[expectedAmountsOut.length-1]), String(await alm.balanceOf(amb.address)), "AMB balance")
         });
     });
 });

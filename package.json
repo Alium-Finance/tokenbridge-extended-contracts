@@ -41,7 +41,7 @@
     "node": ">=14.0.0"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.4.2"
+    "@openzeppelin/contracts": "^4.5.0"
   },
   "scripts": {
     "build": "npx hardhat compile",

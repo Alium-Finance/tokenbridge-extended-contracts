@@ -10,8 +10,8 @@ contract AMBMock {
 
 	IERC20 public token;
 
-	constructor() {
-		token = new ERC20("Bridge token", "bERC20");
+	constructor(IERC20 _token) {
+		token = _token;
 	}
 
 	function relayTokens(address _receiver, uint256 _value) external {
