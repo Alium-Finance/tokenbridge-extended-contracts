@@ -1,15 +1,20 @@
 import hre from "hardhat";
-const ethers = hre.ethers;
 
 import TransparentUpgradeableProxyArtifact from "@openzeppelin/contracts/build/contracts/TransparentUpgradeableProxy.json"
 
 async function main() {
-    const [owner] = await ethers.getSigners();
+    const [owner] = await hre.ethers.getSigners();
     console.log(`Upgredeable admin: ${owner.address}`)
 
     // We get the contract to deploy
     const MulticallUserExecutable = await hre.ethers.getContractFactory("MulticallUserExecutable");
     const MulticallAMBExecutable = await hre.ethers.getContractFactory("MulticallAMBExecutable");
+    const EventLogger = await hre.ethers.getContractFactory("EventLogger");
+
+    const TransparentUpgradeableProxy = await hre.ethers.getContractFactory(
+        TransparentUpgradeableProxyArtifact.abi,
+        TransparentUpgradeableProxyArtifact.bytecode
+    )
 
     const userMulticall = await MulticallUserExecutable.deploy();
     await userMulticall.deployed();
@@ -19,24 +24,30 @@ async function main() {
     await ambMulticall.deployed();
     console.log("MulticallAMBExecutable implementation at:", ambMulticall.address);
 
-    const TransparentUpgradeableProxy = await hre.ethers.getContractFactory(
-        TransparentUpgradeableProxyArtifact.abi,
-        TransparentUpgradeableProxyArtifact.bytecode
-    )
+    const eventLogger = await EventLogger.deploy(owner.address);
+    await eventLogger.deployed();
+    console.log("EventLogger implementation at:", eventLogger.address);
 
     const userMulticallProxy = await TransparentUpgradeableProxy.deploy(
         userMulticall.address,
         owner.address,
         "0x"
     )
-    console.log("MulticallUserExecutable deployed to:", userMulticallProxy.address);
+    console.log("MulticallUserExecutable proxy deployed to:", userMulticallProxy.address);
 
     const ambMulticallProxy = await TransparentUpgradeableProxy.deploy(
         ambMulticall.address,
         owner.address,
         "0x"
     )
-    console.log("MulticallAMBExecutable deployed to:", ambMulticallProxy.address);
+    console.log("MulticallAMBExecutable proxy deployed to:", ambMulticallProxy.address);
+
+    const eventLoggerProxy = await TransparentUpgradeableProxy.deploy(
+        eventLogger.address,
+        owner.address,
+        "0x"
+    )
+    console.log("EventLogger proxy deployed to:", eventLoggerProxy.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
