@@ -135,7 +135,7 @@ describe("Multicall User executable", function () {
     });
 
     describe("success tests", () => {
-        it.only("#execute", async () => {
+        it("#execute", async () => {
             await erc20.mint(ALICE, parseEther("1.0"))
             await erc20.connect(ALICE_SIGNER).approve(multicall.address, parseEther("1.0"))
 
@@ -184,6 +184,7 @@ describe("Multicall User executable", function () {
                     dest: amb.address,
                     data: bridgeInterface.encodeFunctionData('relayTokens', [
                         multicallForeignChain,
+                        multicallForeignChain,
                         expectedAmountsOut[expectedAmountsOut.length-1]
                     ]),
                     value: 0
@@ -202,16 +203,63 @@ describe("Multicall User executable", function () {
                 },
             ];
 
-            // console.log(data.map(value => value.data))
-            let scenarioHash = await multicall.countScenarioHash(data.map(value => value.data));
+            let scenarioHash = await multicall.countScenarioHashByData(data.map(value => value.data));
 
             console.log(`Scenario hash ERC20_ERC20: ${scenarioHash}`)
 
             await multicall.connect(OWNER_SIGNER).setScenario(scenarioHash, "ERC20_ERC20")
 
+            const scenarioERC20_ERC20 = await multicall.scenarios(scenarioHash)
+
+            assert.equal(scenarioERC20_ERC20.name, "ERC20_ERC20", "Scenario name")
+            assert.equal(scenarioERC20_ERC20.status, true, "Scenario status")
+
             await multicall.connect(ALICE_SIGNER).execute(data);
 
             assert.equal(String(expectedAmountsOut[expectedAmountsOut.length-1]), String(await alm.balanceOf(amb.address)), "AMB balance")
         });
+
+        describe('Signature helper view methods', () => {
+            it('#countScenarioHashByData', async () => {
+                const erc20Interface = new Interface([...erc20.interface.fragments])
+
+                let data0 = erc20Interface.encodeFunctionData('approve', [
+                    router.address,
+                    ethers.constants.MaxUint256
+                ]);
+                let data1 = erc20Interface.encodeFunctionData('transferFrom', [
+                    ALICE,
+                    multicall.address,
+                    parseEther("1.0")
+                ]);
+
+                let hash0 = await multicall.countScenarioHashByData([data0, data1])
+
+                data0 = erc20Interface.encodeFunctionData('approve', [
+                    multicall.address,
+                    ethers.constants.MaxUint256
+                ]);
+                data1 = erc20Interface.encodeFunctionData('transferFrom', [
+                    BOB,
+                    factory.address,
+                    parseEther("1.5")
+                ]);
+
+                let hash1 = await multicall.countScenarioHashByData([data0, data1])
+
+                assert.equal(hash0, hash1, "Hash counting is wrong")
+            })
+
+            it('#getSignature', async () => {
+                const erc20Interface = new Interface([...erc20.interface.fragments])
+
+                let data0 = erc20Interface.encodeFunctionData('approve', [
+                    router.address,
+                    ethers.constants.MaxUint256
+                ]);
+
+                assert.equal(await multicall.getSignature(data0), data0.slice(0, 10), "Signature wrong count")
+            })
+        })
     });
 });

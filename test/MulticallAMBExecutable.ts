@@ -7,7 +7,7 @@ import { Interface, parseEther } from "ethers/lib/utils";
 
 chai.use(solidity);
 
-describe.skip("Multicall AMB executable", function () {
+describe("Multicall AMB executable", function () {
     let accounts: Signer[];
 
     let OWNER_SIGNER: any;

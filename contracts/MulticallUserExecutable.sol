@@ -91,7 +91,7 @@ contract MulticallUserExecutable is MulticallExecutable {
         scenarios[_scenario].status = true;
     }
 
-    function countScenarioHash(bytes[] calldata _data)
+    function countScenarioHashByData(bytes[] calldata _data)
         external
         pure
         returns (bytes32 hash)
@@ -101,5 +101,21 @@ contract MulticallUserExecutable is MulticallExecutable {
             signatures[i] = SignatureHelper.getSignature(_data[i]);
         }
         hash = SignatureHelper.getHash(signatures);
+    }
+
+    function countScenarioHashBySigs(bytes4[] calldata _signatures)
+        external
+        pure
+        returns (bytes32 hash)
+    {
+        hash = SignatureHelper.getHash(_signatures);
+    }
+
+    function getSignature(bytes calldata _data)
+        external
+        pure
+        returns (bytes4 signature)
+    {
+        signature = SignatureHelper.getSignature(_data);
     }
 }
