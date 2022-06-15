@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./MulticallExecutable.sol";
 import "./libs/SignatureHelper.sol";
+import "./interfaces/IUniV2PriceOracle.sol";
 
 /**
  * @dev Provides a function to batch together multiple calls in a single external call.
@@ -20,9 +21,21 @@ contract MulticallUserExecutable is MulticallExecutable {
     address alm;
     address amb;
     address eventLogger;
+    address priceOracle;
+    address immutable WETH;
+    uint256 fee;
+    address payable feeTo;
 
     mapping (address => bool) public routers;
     mapping (bytes32 => Scenario) public scenarios;
+
+    event PriceOracleSet(address oracle);
+
+    constructor(address _WETH) {
+        require(_WETH != address(0), "Weth zero?");
+
+        WETH = _WETH;
+    }
 
     function execute(InputData[] calldata _data)
         public
@@ -30,6 +43,18 @@ contract MulticallUserExecutable is MulticallExecutable {
         override
         returns (bytes[] memory results)
     {
+        if (priceOracle != address(0)) {
+            uint256 ethFee = calcFee();
+
+            require(ethFee != 0, "Fee is zero");
+            // usdt -> output weth >= msg.value weth
+            require(ethFee >= msg.value, "Not enough for fee");
+
+            Address.sendValue(feeTo, ethFee);
+
+            _updatePrice();
+        }
+
         bytes4[] memory signatures = new bytes4[](_data.length);
         for (uint i; i < _data.length; i++) {
             signatures[i] = SignatureHelper.getSignature(_data[i].data);
@@ -91,6 +116,19 @@ contract MulticallUserExecutable is MulticallExecutable {
         scenarios[_scenario].status = true;
     }
 
+    function setPriceOracle(address _oracle) external onlyOwner {
+        eventLogger = _oracle;
+        emit PriceOracleSet(_oracle);
+    }
+
+    function setFee(uint256 _busdEquAmount, address payable _feeTo) external onlyOwner {
+        require(_busdEquAmount != 0, "Fee is zero?");
+        require(_feeTo != address(0), "Fee to zero?");
+
+        fee = _busdEquAmount;
+        feeTo = _feeTo;
+    }
+
     function countScenarioHashByData(bytes[] calldata _data)
         external
         pure
@@ -117,5 +155,20 @@ contract MulticallUserExecutable is MulticallExecutable {
         returns (bytes4 signature)
     {
         signature = SignatureHelper.getSignature(_data);
+    }
+
+    function calcFee() public view returns (uint256 ethFee) {
+        IUniV2PriceOracle _priceOracle = IUniV2PriceOracle(priceOracle);
+        address consultToken = (_priceOracle.token0() != WETH)
+            ? _priceOracle.token0()
+            : _priceOracle.token1();
+        ethFee = _priceOracle.consult(consultToken, fee);
+    }
+
+    function _updatePrice() internal {
+        IUniV2PriceOracle _priceOracle = IUniV2PriceOracle(priceOracle);
+        if (block.timestamp - _priceOracle.blockTimestampLast() > _priceOracle.PERIOD()) {
+            _priceOracle.update();
+        }
     }
 }
