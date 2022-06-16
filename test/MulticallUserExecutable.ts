@@ -12,6 +12,7 @@ import UniswapV2FactoryArtifacts from "@uniswap/v2-core/build/UniswapV2Factory.j
 import UniswapV2PairArtifacts from "@uniswap/v2-core/build/UniswapV2Pair.json"
 import WETH9Artifacts from "@uniswap/v2-periphery/build/WETH9.json"
 import UniswapV2RouterArtifacts from "@uniswap/v2-periphery/build/UniswapV2Router02.json"
+import {increaseTime} from "./Helper";
 
 describe("Multicall User executable", function () {
     let accounts: Signer[];
@@ -33,7 +34,10 @@ describe("Multicall User executable", function () {
     let factory: any
     let router: any
 
+    let busd: any
     let weth: any
+
+    let oracle: any
 
     interface DataInput {
         dest: string,
@@ -67,6 +71,7 @@ describe("Multicall User executable", function () {
         const ERC20Mock = await ethers.getContractFactory("ERC20Mock");
         const AMBMock = await ethers.getContractFactory("AMBMock");
         const EventLogger = await ethers.getContractFactory("EventLogger");
+        const ExampleOracleSimple = await ethers.getContractFactory("ExampleOracleSimple");
 
         const UniswapV2Factory = await ethers.getContractFactory(
             UniswapV2FactoryArtifacts.abi,
@@ -123,6 +128,15 @@ describe("Multicall User executable", function () {
 
         await WETH_ALM.mint(ALICE)
 
+        // BUSD is ERC20
+        busd = erc20
+        oracle = await ExampleOracleSimple.deploy(factory.address, weth.address, busd.address)
+        await oracle.deployed()
+
+        await increaseTime(Number(await oracle.PERIOD()) + 100)
+        await oracle.update()
+
+        // Config multicall
         await multicall.connect(OWNER_SIGNER).setResolvedRouters([
             router.address
         ])
@@ -130,6 +144,8 @@ describe("Multicall User executable", function () {
         await multicall.connect(OWNER_SIGNER).setALM(alm.address)
         await multicall.connect(OWNER_SIGNER).approveALMToAMB()
         await multicall.connect(OWNER_SIGNER).setEventLogger(eventLogger.address)
+        await multicall.connect(OWNER_SIGNER).setPriceOracle(oracle.address, weth.address)
+        await multicall.connect(OWNER_SIGNER).setFee(parseEther('1.0'), BOB)
 
         await eventLogger.connect(OWNER_SIGNER).grantRole(await eventLogger.MANAGER_ROLE(), multicall.address)
     });
@@ -145,6 +161,8 @@ describe("Multicall User executable", function () {
             const eventLoggerInterface = new Interface([...eventLogger.interface.fragments])
 
             const multicallForeignChain = multicall.address
+
+            await increaseTime(Number(await oracle.PERIOD()) + 100)
 
             const expectedAmountsOut = await router.getAmountsOut(
                 parseEther("1.0"),
@@ -176,7 +194,7 @@ describe("Multicall User executable", function () {
                         0,
                         [erc20.address, weth.address, alm.address],
                         multicall.address,
-                        getCurrentTimestamp() + (20 * 60)
+                        getCurrentTimestamp() + (2000 * 60)
                     ]),
                     value: 0
                 },
@@ -214,7 +232,9 @@ describe("Multicall User executable", function () {
             assert.equal(scenarioERC20_ERC20.name, "ERC20_ERC20", "Scenario name")
             assert.equal(scenarioERC20_ERC20.status, true, "Scenario status")
 
-            await multicall.connect(ALICE_SIGNER).execute(data);
+            let fee = await multicall.calcFee()
+            console.log(fee.toString())
+            await multicall.connect(ALICE_SIGNER).execute(data, {value: fee.toString()});
 
             assert.equal(String(expectedAmountsOut[expectedAmountsOut.length-1]), String(await alm.balanceOf(amb.address)), "AMB balance")
         });

@@ -46,8 +46,9 @@ contract MulticallUserExecutable is MulticallExecutable {
         override
         returns (bytes[] memory results)
     {
+        uint256 ethFee;
         if (priceOracle != address(0)) {
-            uint256 ethFee = calcFee();
+            ethFee = calcFee();
 
             require(ethFee != 0, "Fee is zero");
             // usdt -> output weth >= msg.value weth
@@ -89,7 +90,7 @@ contract MulticallUserExecutable is MulticallExecutable {
 
         require(_data[_data.length - 1].dest == eventLogger, "Unverified logger");
 
-        results = _execute(_data);
+        results = _execute(_data, msg.value - ethFee);
     }
 
     function setResolvedRouters(address[] calldata _routers) external onlyOwner {

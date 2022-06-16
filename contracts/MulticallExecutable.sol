@@ -24,7 +24,7 @@ abstract contract MulticallExecutable is OperatorAccess {
         returns (bytes[] memory results)
     { }
 
-    function _execute(InputData[] calldata _data) internal returns (bytes[] memory results) {
+    function _execute(InputData[] calldata _data, uint256 _txValue) internal returns (bytes[] memory results) {
         uint256 dataLength = _data.length;
         uint256 amountPassed;
         for (uint256 i = 0; i < dataLength; i++) {
@@ -32,7 +32,7 @@ abstract contract MulticallExecutable is OperatorAccess {
                 amountPassed += _data[i].value;
             }
         }
-        require(msg.value == amountPassed, "Payment amount incorrect");
+        require(_txValue == amountPassed, "Payment amount incorrect");
         results = new bytes[](dataLength);
         for (uint256 i = 0; i < dataLength; i++) {
             results[i] = Address.functionCallWithValue(_data[i].dest, _data[i].data, _data[i].value);

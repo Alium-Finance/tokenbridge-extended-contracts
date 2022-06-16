@@ -19,6 +19,6 @@ contract MulticallAMBExecutable is MulticallExecutable {
         onlyOperator
         returns (bytes[] memory results)
     {
-        results = _execute(_data);
+        results = _execute(_data, msg.value);
     }
 }
