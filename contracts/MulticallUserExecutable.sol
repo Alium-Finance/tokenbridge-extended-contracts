@@ -30,6 +30,14 @@ contract MulticallUserExecutable is MulticallExecutable {
     mapping (bytes32 => Scenario) public scenarios;
 
     event PriceOracleSet(address oracle);
+    event AMBSet(address amb);
+    event ALMSet(address alm);
+    event EventLoggerSet(address eventLogger);
+    event ScenarioSet(bytes32 hash, string key);
+    event FeeSet(uint256 fee);
+    event FeeToSet(address feeTo);
+    event RouterSet(address router);
+    event RouterUnset(address router);
 
     constructor(address _WETH) {
         require(_WETH != address(0), "Weth zero?");
@@ -92,19 +100,30 @@ contract MulticallUserExecutable is MulticallExecutable {
     function setResolvedRouters(address[] calldata _routers) external onlyOwner {
         for (uint i; i < _routers.length; i++) {
             routers[_routers[i]] = true;
+            emit RouterSet(_routers[i]);
+        }
+    }
+
+    function unsetResolvedRouters(address[] calldata _routers) external onlyOwner {
+        for (uint i; i < _routers.length; i++) {
+            routers[_routers[i]] = false;
+            emit RouterUnset(_routers[i]);
         }
     }
 
     function setAMB(address _amb) external onlyOwner {
         amb = _amb;
+        emit AMBSet(_amb);
     }
 
     function setALM(address _alm) external onlyOwner {
         alm = _alm;
+        emit ALMSet(_alm);
     }
 
     function setEventLogger(address _eventLogger) external onlyOwner {
         eventLogger = _eventLogger;
+        emit EventLoggerSet(_eventLogger);
     }
 
     function approveALMToAMB() external onlyOwner {
@@ -114,6 +133,7 @@ contract MulticallUserExecutable is MulticallExecutable {
     function setScenario(bytes32 _scenario, string memory _key) external onlyOwner {
         scenarios[_scenario].name = _key;
         scenarios[_scenario].status = true;
+        emit ScenarioSet(_scenario, _key);
     }
 
     function setPriceOracle(address _oracle) external onlyOwner {
@@ -127,6 +147,8 @@ contract MulticallUserExecutable is MulticallExecutable {
 
         fee = _busdEquAmount;
         feeTo = _feeTo;
+        emit FeeSet(_busdEquAmount);
+        emit FeeToSet(_feeTo);
     }
 
     function countScenarioHashByData(bytes[] calldata _data)
