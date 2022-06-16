@@ -22,7 +22,7 @@ contract MulticallUserExecutable is MulticallExecutable {
     address amb;
     address eventLogger;
     address priceOracle;
-    address immutable WETH;
+    address WETH;
     uint256 fee;
     address payable feeTo;
 
@@ -30,6 +30,7 @@ contract MulticallUserExecutable is MulticallExecutable {
     mapping (bytes32 => Scenario) public scenarios;
 
     event PriceOracleSet(address oracle);
+    event WethSet(address weth);
     event AMBSet(address amb);
     event ALMSet(address alm);
     event EventLoggerSet(address eventLogger);
@@ -38,12 +39,6 @@ contract MulticallUserExecutable is MulticallExecutable {
     event FeeToSet(address feeTo);
     event RouterSet(address router);
     event RouterUnset(address router);
-
-    constructor(address _WETH) {
-        require(_WETH != address(0), "Weth zero?");
-
-        WETH = _WETH;
-    }
 
     function execute(InputData[] calldata _data)
         public
@@ -136,9 +131,15 @@ contract MulticallUserExecutable is MulticallExecutable {
         emit ScenarioSet(_scenario, _key);
     }
 
-    function setPriceOracle(address _oracle) external onlyOwner {
-        eventLogger = _oracle;
+    function setPriceOracle(address _oracle, address _weth) external onlyOwner {
+        if (_oracle != address(0)) {
+            require(_weth != address(0), "WETH zero?");
+        }
+
+        priceOracle = _oracle;
+        WETH = _weth;
         emit PriceOracleSet(_oracle);
+        emit WethSet(_weth);
     }
 
     function setFee(uint256 _busdEquAmount, address payable _feeTo) external onlyOwner {
