@@ -18,6 +18,11 @@ contract MulticallUserExecutable is MulticallExecutable {
         bool status;
     }
 
+    string constant UNVERIFIED_DEX = "UNVERIFIED_DEX";
+    string constant UNVERIFIED_ALM = "UNVERIFIED_ALM";
+    string constant UNVERIFIED_BRIDGE = "UNVERIFIED_BRIDGE";
+    string constant UNVERIFIED_LOGGER = "UNVERIFIED_LOGGER";
+
     address alm;
     address amb;
     address eventLogger;
@@ -67,28 +72,78 @@ contract MulticallUserExecutable is MulticallExecutable {
 
         require(scenarios[hash].status, "Unverified signature request");
 
-        bytes32 hashedKey = keccak256(abi.encodePacked(scenarios[hash].name));
+        bytes32 sHash = keccak256(abi.encodePacked(scenarios[hash].name));
 
-        // ERC20 -> ERC20
-        if (hashedKey == keccak256("ERC20_ERC20")) {
-            require(routers[_data[2].dest], "Unverified dex");
-            require(_data[3].dest == amb, "Unverified bridge");
+        // CORE_CORE and CORE_ERC20
+        if (sHash == keccak256("CORE_CORE") || sHash == keccak256("CORE_ERC20")) {
+            require(routers[_data[0].dest], UNVERIFIED_DEX);
+            require(_data[1].dest == amb, UNVERIFIED_BRIDGE);
         }
-        // ERC20 -> ERC20 + approve erc20 to dex
-        if (hashedKey == keccak256("aERC20_ERC20")) {
-            require(routers[_data[1].dest], "Unverified dex");
-            require(_data[2].dest == amb, "Unverified bridge");
+        // CORE_CORE and CORE_ERC20 another side
+        if (sHash == keccak256("aCORE_CORE") || sHash == keccak256("aCORE_ERC20")) {
+            require(routers[_data[0].dest], UNVERIFIED_DEX);
+        }
+        // ERC20_CORE
+        if (sHash == keccak256("ERC20_CORE")) {
+            require(routers[_data[2].dest], UNVERIFIED_DEX);
+            require(_data[3].dest == amb, UNVERIFIED_BRIDGE);
+        }
+        // ERC20_CORE another side
+        if (sHash == keccak256("aERC20_CORE")) {
+            require(routers[_data[2].dest], UNVERIFIED_DEX);
+        }
+        // ERC20 -> ERC20
+        if (sHash == keccak256("ERC20_ERC20")) {
+            require(routers[_data[2].dest], UNVERIFIED_DEX);
+            require(_data[3].dest == amb, UNVERIFIED_BRIDGE);
+        }
+        // ERC20 -> ERC20 another side
+        if (sHash == keccak256("aERC20_ERC20")) {
+            require(routers[_data[2].dest], UNVERIFIED_DEX);
+        }
+        // ALM -> ALM
+        if (sHash == keccak256("ALM_ALM")) {
+            require(_data[1].dest == amb, UNVERIFIED_BRIDGE);
+        }
+        // ALM -> ALM another side
+        if (sHash == keccak256("aALM_ALM")) {
+            require(_data[1].dest == alm, UNVERIFIED_ALM);
+        }
+        // ALM -> CORE
+        if (sHash == keccak256("ALM_CORE")) {
+            require(_data[1].dest == amb, UNVERIFIED_BRIDGE);
+        }
+        // ALM -> CORE another side
+        if (sHash == keccak256("aALM_CORE")) {
+            require(_data[1].dest == alm, UNVERIFIED_ALM);
         }
         // ALM -> ERC20
-        if (hashedKey == keccak256("ALM_ERC20")) {
-            require(_data[1].dest == amb, "Unverified bridge");
+        if (sHash == keccak256("ALM_ERC20")) {
+            require(_data[1].dest == amb, UNVERIFIED_BRIDGE);
         }
-        // ETH -> ERC20
-        if (hashedKey == keccak256("ETH_ERC20")) {
-            require(_data[0].dest == amb, "Unverified bridge");
+        // ALM -> ERC20 another side
+        if (sHash == keccak256("aALM_ERC20")) {
+            require(_data[1].dest == alm, UNVERIFIED_ALM);
+        }
+        // CORE -> ALM
+        if (sHash == keccak256("CORE_ALM")) {
+            require(_data[1].dest == amb, UNVERIFIED_BRIDGE);
+        }
+        // CORE -> ALM another side
+        if (sHash == keccak256("aCORE_ALM")) {
+            require(_data[1].dest == alm, UNVERIFIED_ALM);
+        }
+        // ERC20 -> ALM
+        if (sHash == keccak256("ERC20_ALM")) {
+            require(routers[_data[2].dest], UNVERIFIED_DEX);
+            require(_data[3].dest == amb, UNVERIFIED_BRIDGE);
+        }
+        // ERC20 -> ALM another side
+        if (sHash == keccak256("aERC20_ALM")) {
+            require(routers[_data[2].dest], UNVERIFIED_DEX);
         }
 
-        require(_data[_data.length - 1].dest == eventLogger, "Unverified logger");
+        require(_data[_data.length - 1].dest == eventLogger, UNVERIFIED_LOGGER);
 
         results = _execute(_data, msg.value - ethFee);
     }
@@ -127,9 +182,18 @@ contract MulticallUserExecutable is MulticallExecutable {
     }
 
     function setScenario(bytes32 _scenario, string memory _key) external onlyOwner {
+        require(!scenarios[_scenario].status, "Scenario already set");
+
         scenarios[_scenario].name = _key;
         scenarios[_scenario].status = true;
         emit ScenarioSet(_scenario, _key);
+    }
+
+    function unsetScenario(bytes32 _scenario) external onlyOwner {
+        require(scenarios[_scenario].status, "Scenario already unset");
+
+        delete scenarios[_scenario];
+        emit ScenarioUnset(_scenario);
     }
 
     function setPriceOracle(address _oracle, address _weth) external onlyOwner {
