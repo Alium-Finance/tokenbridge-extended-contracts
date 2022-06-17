@@ -13,7 +13,7 @@ import "./MulticallExecutable.sol";
  */
 contract MulticallAMBExecutable is MulticallExecutable {
     function execute(InputData[] calldata _data)
-        public
+        external
         payable
         override
         onlyOperator

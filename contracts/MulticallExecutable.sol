@@ -18,7 +18,7 @@ abstract contract MulticallExecutable is OperatorAccess {
     }
 
     function execute(InputData[] calldata _data)
-        public
+        external
         virtual
         payable
         returns (bytes[] memory results)

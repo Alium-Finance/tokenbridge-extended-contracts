@@ -47,7 +47,7 @@ contract MulticallUserExecutable is MulticallExecutable {
     event RouterUnset(address router);
 
     function execute(InputData[] calldata _data)
-        public
+        external
         payable
         override
         returns (bytes[] memory results)
