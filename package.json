@@ -9,6 +9,7 @@
     "@typechain/hardhat": "^4.0.0",
     "@types/crypto-js": "^4.1.1",
     "@types/mocha": "^9.1.0",
+    "@typescript-eslint/eslint-plugin": "^5.28.0",
     "@uniswap/v2-core": "^1.0.1",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "chai": "^4.3.6",
@@ -46,6 +47,8 @@
   "scripts": {
     "build": "npx hardhat compile",
     "test": "npx hardhat test",
+    "lint": "npx solhint 'contracts/**/*.sol' --ignore-path .solhintignore",
+    "prettier": "npx prettier --write 'contracts/**/*.sol'",
     "prettier:js": "npx prettier --write 'test/**/*.ts'",
     "lint:js": "npx eslint . --ext .ts",
     "lint:js-fix": "npx eslint . --ext .ts --fix"

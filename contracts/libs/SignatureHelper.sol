@@ -13,7 +13,11 @@ library SignatureHelper {
         }
     }
 
-    function getHash(bytes4[] memory _signatures) internal pure returns (bytes32 hash) {
+    function getHash(bytes4[] memory _signatures)
+        internal
+        pure
+        returns (bytes32 hash)
+    {
         hash = keccak256(abi.encodePacked(_signatures));
     }
 }

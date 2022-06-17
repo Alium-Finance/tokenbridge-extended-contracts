@@ -16,11 +16,14 @@ contract EventLogger is AccessControl, IEventLogger {
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
     }
 
-    function log(EventData calldata _data) external override onlyRole(MANAGER_ROLE) {
+    function log(EventData calldata _data)
+        external
+        override
+        onlyRole(MANAGER_ROLE)
+    {
         require(_data.chains[0] != 0 && _data.chains[1] != 0, "Chain id 0?");
         require(
-            _data.parties[0] != address(0) &&
-            _data.parties[1] != address(0),
+            _data.parties[0] != address(0) && _data.parties[1] != address(0),
             "EventLogger: incorrect parties"
         );
 
