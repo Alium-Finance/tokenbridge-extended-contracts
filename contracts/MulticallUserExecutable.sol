@@ -40,6 +40,7 @@ contract MulticallUserExecutable is MulticallExecutable {
     event ALMSet(address alm);
     event EventLoggerSet(address eventLogger);
     event ScenarioSet(bytes32 hash, string key);
+    event ScenarioUnset(bytes32 hash);
     event FeeSet(uint256 fee);
     event FeeToSet(address feeTo);
     event RouterSet(address router);
