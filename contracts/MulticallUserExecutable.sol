@@ -56,10 +56,11 @@ contract MulticallUserExecutable is MulticallExecutable {
         if (priceOracle != address(0)) {
             ethFee = calcFee();
 
-            require(ethFee != 0, "Fee is zero");
-            require(ethFee >= msg.value, "Not enough for fee");
+            if (ethFee != 0) {
+                require(msg.value >= ethFee, "Not enough for fee");
 
-            Address.sendValue(feeTo, ethFee);
+                Address.sendValue(feeTo, ethFee);
+            }
 
             _updatePrice();
         }
