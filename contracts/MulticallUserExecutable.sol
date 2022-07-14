@@ -75,78 +75,31 @@ contract MulticallUserExecutable is MulticallExecutable {
 
         bytes32 sHash = keccak256(abi.encodePacked(scenarios[hash].name));
 
-        // CORE_CORE and CORE_ERC20
-        if (
-            sHash == keccak256("CORE_CORE") || sHash == keccak256("CORE_ERC20")
-        ) {
+        // CORE -> CORE/ERC20/ALM
+        if (sHash == keccak256("CORE_ANY")) {
             require(routers[_data[0].dest], _UNVERIFIED_DEX);
             require(_data[1].dest == amb, _UNVERIFIED_BRIDGE);
         }
-        // CORE_CORE and CORE_ERC20 another side
-        if (
-            sHash == keccak256("aCORE_CORE") ||
-            sHash == keccak256("aCORE_ERC20")
-        ) {
-            require(routers[_data[0].dest], _UNVERIFIED_DEX);
-        }
-        // ERC20_CORE
-        if (sHash == keccak256("ERC20_CORE")) {
+        // ERC20 -> CORE/ERC20/ALM
+        if (sHash == keccak256("ERC20_ANY")) {
             require(routers[_data[2].dest], _UNVERIFIED_DEX);
             require(_data[3].dest == amb, _UNVERIFIED_BRIDGE);
         }
-        // ERC20_CORE another side
-        if (sHash == keccak256("aERC20_CORE")) {
-            require(routers[_data[2].dest], _UNVERIFIED_DEX);
-        }
-        // ERC20 -> ERC20
-        if (sHash == keccak256("ERC20_ERC20")) {
-            require(routers[_data[2].dest], _UNVERIFIED_DEX);
-            require(_data[3].dest == amb, _UNVERIFIED_BRIDGE);
-        }
-        // ERC20 -> ERC20 another side
-        if (sHash == keccak256("aERC20_ERC20")) {
-            require(routers[_data[2].dest], _UNVERIFIED_DEX);
-        }
-        // ALM -> ALM
-        if (sHash == keccak256("ALM_ALM")) {
+        // ALM -> ALM/CORE/ERC20
+        if (sHash == keccak256("ALM_ANY")) {
             require(_data[1].dest == amb, _UNVERIFIED_BRIDGE);
         }
-        // ALM -> ALM another side
+        // another side CORE -> ALM/CORE/ERC20
+        if (sHash == keccak256("aCORE_ANY")) {
+            require(routers[_data[0].dest], _UNVERIFIED_DEX);
+        }
+        // another side ERC20 -> ALM/CORE/ERC20
+        if (sHash == keccak256("aERC20_ANY")) {
+            require(routers[_data[2].dest], _UNVERIFIED_DEX);
+        }
+        // another side ALM -> ALM/CORE/ERC20
         if (sHash == keccak256("aALM_ALM")) {
             require(_data[1].dest == alm, _UNVERIFIED_ALM);
-        }
-        // ALM -> CORE
-        if (sHash == keccak256("ALM_CORE")) {
-            require(_data[1].dest == amb, _UNVERIFIED_BRIDGE);
-        }
-        // ALM -> CORE another side
-        if (sHash == keccak256("aALM_CORE")) {
-            require(_data[1].dest == alm, _UNVERIFIED_ALM);
-        }
-        // ALM -> ERC20
-        if (sHash == keccak256("ALM_ERC20")) {
-            require(_data[1].dest == amb, _UNVERIFIED_BRIDGE);
-        }
-        // ALM -> ERC20 another side
-        if (sHash == keccak256("aALM_ERC20")) {
-            require(_data[1].dest == alm, _UNVERIFIED_ALM);
-        }
-        // CORE -> ALM
-        if (sHash == keccak256("CORE_ALM")) {
-            require(_data[1].dest == amb, _UNVERIFIED_BRIDGE);
-        }
-        // CORE -> ALM another side
-        if (sHash == keccak256("aCORE_ALM")) {
-            require(_data[1].dest == alm, _UNVERIFIED_ALM);
-        }
-        // ERC20 -> ALM
-        if (sHash == keccak256("ERC20_ALM")) {
-            require(routers[_data[2].dest], _UNVERIFIED_DEX);
-            require(_data[3].dest == amb, _UNVERIFIED_BRIDGE);
-        }
-        // ERC20 -> ALM another side
-        if (sHash == keccak256("aERC20_ALM")) {
-            require(routers[_data[2].dest], _UNVERIFIED_DEX);
         }
 
         require(
