@@ -149,6 +149,18 @@ contract MulticallUserExecutable is MulticallExecutable {
         IERC20(alm).approve(amb, type(uint256).max);
     }
 
+    function approveAnyToAMB(IERC20 _token) external {
+        require(amb != address(0), "AMB is unset");
+
+        _token.approve(amb, type(uint256).max);
+    }
+
+    function approveAnyToDex(IERC20 _token, address _dex) external {
+        require(routers[_dex], _UNVERIFIED_DEX);
+
+        _token.approve(_dex, type(uint256).max);
+    }
+
     function setScenario(bytes32 _scenario, string memory _key)
         external
         onlyOwner

@@ -151,7 +151,113 @@ describe("Multicall User executable", function () {
     });
 
     describe("success tests", () => {
+        before("execute", async () => {
+            const CORE_ANY = '0x7475d426a1e1717194fcc1d0a2b9d3f680d85310b04120b8d0e7f8e75a5a070a'
+            await multicall.setScenario(CORE_ANY, "CORE_ANY")
+            console.log('Scenario set!')
+            const ERC20_ANY = '0x1fe3ddfc9ca9b2084b2d9150d66a2fca4b4b0bb9aacf07bd33be560bcc8b4f22'
+            await multicall.setScenario(ERC20_ANY, "ERC20_ANY")
+            console.log('Scenario set!')
+            const ALM_ANY = '0xa196c5bafe32002a4b1e616f19639a21071175c42b6b92e11f569bc3ceb9ada4'
+            await multicall.setScenario(ALM_ANY, "ALM_ANY")
+            console.log('Scenario set!')
+            const aCORE_ANY = '0x1416346480ec3621ababe098ea02337ec5e1fd7af4bee09c90883f6a07ae4259'
+            await multicall.setScenario(aCORE_ANY, "aCORE_ANY")
+            console.log('Scenario set!')
+            const aERC20_ANY = '0x826883e263e00faa37e7347f35e0f67f8791892983edd078cd04c554c80f7ffb'
+            await multicall.setScenario(aERC20_ANY, "aERC20_ANY")
+            console.log('Scenario set!')
+            const aALM_ANY = '0xc0e5f5b5aff04cc1e825dc9a94ced43e3a6cc20881c0a74c8fb353a632887d3c'
+            await multicall.setScenario(aALM_ANY, "aALM_ANY")
+            console.log('Scenario set!')
+        })
+
         it("#execute", async () => {
+            await erc20.mint(ALICE, parseEther("1.0"))
+            await erc20.connect(ALICE_SIGNER).approve(multicall.address, parseEther("1.0"))
+
+            const erc20Interface = new Interface([...erc20.interface.fragments])
+            const routerInterface = new Interface([...router.interface.fragments])
+            const bridgeInterface = new Interface([...amb.interface.fragments])
+            const eventLoggerInterface = new Interface([...eventLogger.interface.fragments])
+
+            const multicallForeignChain = multicall.address
+
+            await increaseTime(Number(await oracle.PERIOD()) + 100)
+
+            const expectedAmountsOut = await router.getAmountsOut(
+              parseEther("1.0"),
+              [erc20.address, weth.address, alm.address]
+            )
+
+            const data: DataInput[] = [
+                {
+                    dest: erc20.address,
+                    data: erc20Interface.encodeFunctionData('transferFrom', [
+                        ALICE,
+                        multicall.address,
+                        parseEther("1.0")
+                    ]),
+                    value: 0
+                },
+                // {
+                //     dest: erc20.address,
+                //     data: erc20Interface.encodeFunctionData('approve', [
+                //         router.address,
+                //         ethers.constants.MaxUint256
+                //     ]),
+                //     value: 0
+                // },
+                {
+                    dest: router.address,
+                    data: routerInterface.encodeFunctionData('swapExactTokensForTokens', [
+                        parseEther("1.0"),
+                        0,
+                        [erc20.address, weth.address, alm.address],
+                        multicall.address,
+                        getCurrentTimestamp() + (2000 * 60)
+                    ]),
+                    value: 0
+                },
+                {
+                    dest: amb.address,
+                    data: bridgeInterface.encodeFunctionData('relayTokens', [
+                        multicallForeignChain,
+                        multicallForeignChain,
+                        expectedAmountsOut[expectedAmountsOut.length-1]
+                    ]),
+                    value: 0
+                },
+                {
+                    dest: eventLogger.address,
+                    data: eventLoggerInterface.encodeFunctionData('log',
+                      // [
+                      //     "tuple(uint256[] chains, address[] tokens, address[] parties) EventData"
+                      // ],
+                      [
+                          [[1, 2], [erc20.address, weth.address], [ALICE, BOB]]
+                      ]
+                    ),
+                    value: 0
+                },
+            ];
+
+            let scenarioHash = await multicall.countScenarioHashByData(data.map(value => value.data));
+
+            console.log(`Scenario hash ERC20_ERC20: ${scenarioHash}`)
+
+            await multicall.connect(OWNER_SIGNER).setScenario(scenarioHash, "ERC20_ERC20")
+
+            await multicall.approveAnyToDex(erc20.address, router.address)
+
+            let fee = await multicall.calcFee()
+            console.log(fee.toString())
+            await multicall.connect(ALICE_SIGNER).execute(data, {value: fee.toString()});
+
+            assert.equal(String(expectedAmountsOut[expectedAmountsOut.length-1]), String(await alm.balanceOf(amb.address)), "AMB balance")
+        })
+
+        it.skip("#execute", async () => {
             await erc20.mint(ALICE, parseEther("1.0"))
             await erc20.connect(ALICE_SIGNER).approve(multicall.address, parseEther("1.0"))
 
