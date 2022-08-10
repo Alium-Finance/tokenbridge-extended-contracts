@@ -27,11 +27,32 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
-  solidity: "0.8.4",
+  // solidity: "0.8.4",
+  solidity: {
+    version: "0.8.4",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 10000,
+      },
+    },
+  },
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
       initialBaseFeePerGas: 0, // workaround from https://github.com/sc-forks/solidity-coverage/issues/652#issuecomment-896330136 . Remove when that issue is closed.
+    },
+    ethereum: {
+      gasPrice: 7000000000,
+      url: process.env.ETHEREUM_URL || "",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+    okex: {
+      gasPrice: "auto",
+      url: process.env.OKEX_URL || "",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
     bsc: {
       gasPrice: "auto",
@@ -39,15 +60,23 @@ module.exports = {
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
+    polygon: {
+      gasPrice: "auto",
+      url: process.env.POLYGON_URL || "",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+    fantom: {
+      gasPrice: "auto",
+      url: process.env.PHANTOM_URL || "",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
+
+    // testnet
     bscTestnet: {
       gasPrice: "auto",
       url: process.env.BSC_TESTNET_URL || "",
-      accounts:
-          process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
-    },
-    phantom: {
-      gasPrice: "auto",
-      url: process.env.PHANTOM_URL || "",
       accounts:
           process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
@@ -61,6 +90,7 @@ module.exports = {
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
     currency: "USD",
+    gasPrice: 5
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
