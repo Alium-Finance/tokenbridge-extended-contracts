@@ -32,8 +32,6 @@ describe("Price Straighten Optimizer", function () {
     let router: any;
     let optimizer: any;
 
-
-
     before("config", async () => {
         accounts = await ethers.getSigners();
 
@@ -149,7 +147,72 @@ describe("Price Straighten Optimizer", function () {
             console.log(`Liquidity: ${liquidity}`)
         });
 
-        it.only("#rebalance with small liquidity", async () => {
+        it.only("#rebalance", async () => {
+            const ERC20Mock = await ethers.getContractFactory(
+              'ERC20Mock'
+            );
+
+            const UniswapV2Pair = await ethers.getContractFactory(
+              UniswapV2PairArtifacts.abi,
+              UniswapV2PairArtifacts.bytecode
+            );
+
+            let tokenA = await ERC20Mock.deploy('Token A', 'AAA')
+            await tokenA.deployed()
+            let tokenB = await ERC20Mock.deploy('Token B', 'BBB')
+            await tokenB.deployed()
+
+            await tokenA.mint(ALICE, parseEther('110000000.0'))
+            await tokenB.mint(ALICE, parseEther('110000000.0'))
+
+            await tokenA.connect(ALICE_SIGNER).approve(router.address, ethers.constants.MaxUint256)
+            await tokenB.connect(ALICE_SIGNER).approve(router.address, ethers.constants.MaxUint256)
+
+            await router.connect(ALICE_SIGNER).addLiquidity(
+              tokenA.address,
+              tokenB.address,
+              parseEther('100000000.0'),
+              parseEther('100000000.0'),
+              0,
+              0,
+              optimizer.address,
+              getCurrentTimestamp() + 1000
+            )
+
+            let pair: Contract = await UniswapV2Pair.attach(String(await factory.getPair(tokenA.address, tokenB.address)))
+
+            console.log('Reserves before: ')
+            console.log(await pair.getReserves())
+
+            console.log('Trade balance before: ')
+            console.log(await tokenA.balanceOf(optimizer.address))
+            console.log(await tokenB.balanceOf(optimizer.address))
+
+            let liquidity: BigNumber = (await pair.balanceOf(optimizer.address)).mul(1).div(100)
+            console.log(`Liquidity: ${liquidity}`)
+
+            let data: Rebalance = {
+                tokenA: tokenA.address,
+                tokenB: tokenB.address,
+                truePriceTokenA: 100,
+                truePriceTokenB: 99,
+                liquidity: liquidity,
+                deadline: getCurrentTimestamp() + 1000
+            }
+            await optimizer.rebalance(data)
+
+            console.log('Reserves after: ')
+            console.log(await pair.getReserves())
+
+            console.log('Trade balance after: ')
+            console.log(await tokenA.balanceOf(optimizer.address))
+            console.log(await tokenB.balanceOf(optimizer.address))
+
+            liquidity = await pair.balanceOf(optimizer.address)
+            console.log(`Liquidity: ${liquidity}`)
+        });
+
+        it("#rebalance with small liquidity", async () => {
             const ERC20Mock = await ethers.getContractFactory(
               'ERC20Mock'
             );
